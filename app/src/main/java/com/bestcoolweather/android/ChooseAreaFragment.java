@@ -1,10 +1,13 @@
 package com.bestcoolweather.android;
 
 import android.app.ProgressDialog;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,6 +21,7 @@ import android.widget.Toast;
 import com.bestcoolweather.android.db.City;
 import com.bestcoolweather.android.db.County;
 import com.bestcoolweather.android.db.Province;
+import com.bestcoolweather.android.gson.Weather;
 import com.bestcoolweather.android.util.HttpUtil;
 import com.bestcoolweather.android.util.Utility;
 
@@ -37,6 +41,7 @@ import okhttp3.Response;
  */
 
 public class ChooseAreaFragment extends Fragment {
+    private static final String TAG = "ChooseAreaFragment";
     private static final int LEVEL_PROVINCE=0;
     private static final int LEVEL_CITY=1;
     private static  final int LEVEL_COUNTY=2;
@@ -76,6 +81,12 @@ public class ChooseAreaFragment extends Fragment {
                   }else if(currentLevel==LEVEL_CITY){
                       selectedCity = cityList.get(i);
                       queryCounties();
+                  }else if(currentLevel==LEVEL_COUNTY){
+                      String weatherId = countyList.get(i).getWeatherId();
+                          Intent intent = new Intent(getActivity(), WeatherActivity.class);
+                          intent.putExtra("weather_id", weatherId);
+                          startActivity(intent);
+                          getActivity().finish();
                   }
             }
         });
@@ -89,6 +100,7 @@ public class ChooseAreaFragment extends Fragment {
                 }
             }
         });
+        queryProvinces();
     }
 
     /**
@@ -118,10 +130,10 @@ public class ChooseAreaFragment extends Fragment {
     private void queryCities(){
         textView.setText(selectedProvince.getProvinceName());
         button.setVisibility(View.VISIBLE);
-        cityList =DataSupport.where("provinceid=?",String.valueOf(selectedProvince.getId())).find(City.class);
+        cityList =DataSupport.where("provinceId=?",String.valueOf(selectedProvince.getId())).find(City.class);
         if(cityList.size()>0){
             dataList.clear();
-            for(City city:cityList){
+            for(City city : cityList){
                 dataList.add(city.getCityName());
             }
             adapter.notifyDataSetChanged();
@@ -137,7 +149,7 @@ public class ChooseAreaFragment extends Fragment {
     private void queryCounties(){
         textView.setText(selectedCity.getCityName());
         button.setVisibility(View.VISIBLE);
-        countyList = DataSupport.where("cityid=?",String.valueOf(selectedCity.getId())).find(County.class);
+        countyList = DataSupport.where("cityId=?",String.valueOf(selectedCity.getId())).find(County.class);
         if(countyList.size()>0){
             dataList.clear();
             for(County county:countyList){
@@ -182,10 +194,12 @@ public class ChooseAreaFragment extends Fragment {
                 }else if("county".equals(type)){
                     result = Utility.handleCountyResponse(responseText,selectedCity.getId());
                 }
+                Log.d(TAG, responseText);
                 if(result){
                     getActivity().runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
+                            closeProgressDialog();
                             if("province".equals(type)){
                                 queryProvinces();
                             }else if("city".equals(type)){
